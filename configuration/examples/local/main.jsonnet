@@ -16,13 +16,85 @@ local minio = (import '../../components/minio.libsonnet')({
 local api = (import 'observatorium-api/observatorium-api.libsonnet');
 local obs = (import '../../components/observatorium.libsonnet');
 local tracing = (import '../../components/tracing.libsonnet');
+local elastic = (import '../../components/elastic.libsonnet');
 local dev = obs {
+  // REF: https://github.com/openshift/elasticsearch-operator/blob/master/config/samples/logging_v1_elasticsearch.yaml
+  elastic: elastic(
+    obs.elastic.config {
+      spec: {
+        managementState: 'Managed',
+        nodeSpec: {
+          resources: {
+            limits: {
+              memory: '1Gi',
+            },
+            requests: {
+              cpu: '100m',
+              memory: '512Mi',
+            },
+          },
+        },
+        nodes: [
+          {
+            nodeCount: 1,
+            roles: [
+              'client',
+              'data',
+              'master',
+            ],
+            storage: {
+              size: '20G',
+            },
+          },
+        ],
+        redundancyPolicy: 'ZeroRedundancy',
+        indexManagement: {
+          policies: [
+            {
+              name: 'infra-policy',
+              pollInterval: '30m',
+              phases: {
+                hot: {
+                  actions: {
+                    rollover: {
+                      maxAge: '8h',
+                    },
+                  },
+                },
+                delete: {
+                  minAge: '2d',
+                },
+              },
+            },
+          ],
+          mappings: [
+            {
+              name: 'infra',
+              policyRef: 'infra-policy',
+              aliases: [
+                'infra',
+                'logs.infra',
+              ],
+            },
+          ],
+        },
+      },
+    },
+  ),
   tracing: tracing(
     obs.tracing.config {
       tenants: [tenant.name],
       enabled: true,
       jaegerSpec: {
-        strategy: 'allinone',
+        strategy: 'production',
+        storage: {
+          type: 'elasticsearch',
+          options: {
+            es: {
+              'server-urls': 'http://' + 'TODO(elasticsearch)' + ':9200',
+            },
+          },
+        },
         ui: {
           options: {
             menu: [

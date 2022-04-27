@@ -9,7 +9,13 @@ metadata:
   name: observatorium-xyz-jaeger-test-oidc
   namespace: observatorium
 spec:
-  strategy: allinone
+  storage:
+    options:
+      es:
+        index-prefix: test-oidc
+        server-urls: http://abc:9200
+    type: elasticsearch
+  strategy: production
   ui:
     options:
       dependencies:

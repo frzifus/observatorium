@@ -81,7 +81,7 @@ function(params) {
       'app.kubernetes.io/component': normalizedName(component),
     },
 
-  local newJaeger(component, config) =
+  local newJaeger(component, config, tenant) =
     local name = normalizedName(tracing.config.name + '-jaeger-' + component);
     {
       apiVersion: 'jaegertracing.io/v1',
@@ -94,6 +94,13 @@ function(params) {
       spec: tracing.config.jaegerSpec,
     } + {
       spec+: {
+        storage+: {
+          options+: {
+            es+: (if tracing.config.jaegerSpec.strategy == 'production' && tracing.config.jaegerSpec.storage.type == 'elasticsearch' then {
+                    'index-prefix'+: tenant,
+                  }),
+          },
+        },
         ui+: {
           options+: {
             menu+: [
@@ -113,7 +120,7 @@ function(params) {
   manifests: {
     otelcollector: tracing.otelcolcr,
   } + {
-    [normalizedName('jaeger-' + tenant)]: newJaeger(tenant, tracing.config.components[tenant])
+    [normalizedName('jaeger-' + tenant)]: newJaeger(tenant, tracing.config.components[tenant], tenant)
     for tenant in tracing.config.tenants
   },
 }

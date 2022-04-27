@@ -1,6 +1,7 @@
 local thanos = (import './thanos.libsonnet');
 local loki = (import './loki.libsonnet');
 local tracing = (import './tracing.libsonnet');
+local elastic = (import './elastic.libsonnet');
 local api = (import 'observatorium-api/observatorium-api.libsonnet');
 
 {
@@ -142,6 +143,13 @@ local api = (import 'observatorium-api/observatorium-api.libsonnet');
     namespace: 'observatorium',
     commonLabels+:: obs.config.commonLabels,
   }),
+
+  elastic:: elastic({
+    local cfg = self,
+    namespace: 'observatorium',
+    commonLabels+:: obs.config.commonLabels,
+  }),
+
 } + {
   local obs = self,
 
@@ -157,6 +165,10 @@ local api = (import 'observatorium-api/observatorium-api.libsonnet');
     } + {
       ['thanos-' + name]: obs.thanos.manifests[name]
       for name in std.objectFields(obs.thanos.manifests)
+    } + {
+      ['elastic-' + name]: obs.elastic[name]
+      for name in std.objectFields(obs.elastic)
+      if obs.elastic[name] != null
     } + (if std.objectHas(obs.loki, 'manifests') then {
            ['loki-' + name]: obs.loki.manifests[name]
            for name in std.objectFields(obs.loki.manifests)
@@ -165,4 +177,5 @@ local api = (import 'observatorium-api/observatorium-api.libsonnet');
          ['tracing-' + name]: obs.tracing.manifests[name]
          for name in std.objectFields(obs.tracing.manifests)
        } else {}),
+  // TODO: add elastic
 }
